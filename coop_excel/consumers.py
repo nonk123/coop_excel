@@ -1,7 +1,8 @@
 from channels.generic.websocket import WebsocketConsumer
 
 import json
-import random
+
+from .excel import table
 
 class ExcelConsumer(WebsocketConsumer):
     INVALID_PAYLOAD = 4004
@@ -38,6 +39,10 @@ class ExcelConsumer(WebsocketConsumer):
         self.send_event("authorized", {
             "name": self.name,
             "color": self.color
+        })
+
+        self.send_event("update", {
+            "table": table.values
         })
 
     def receive(self, text_data):

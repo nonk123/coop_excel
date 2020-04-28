@@ -15,6 +15,19 @@ class Table:
             for x in range(self.width):
                 self.rows[y].append(Cell(x + y))
 
+    def is_in_bounds(self, row, col):
+        return row in range(self.height) and col in range(self.width)
+
+    def get(self, row, col):
+        if self.is_in_bounds(row, col):
+            return self.rows[row][col]
+        else:
+            return Cell("")
+
+    def set(self, row, col, value):
+        if self.is_in_bounds(row, col):
+            self.rows[row][col].value = value
+
     @property
     def values(self):
         values = []

@@ -10,16 +10,26 @@ function respond(event, data) {
 function update(data) {
     const excel = document.getElementById("excel");
 
-    for (row of data.table) {
+    excel.textContent = "";
+
+    for (const [y, row] of data.table.entries()) {
         const rowElement = document.createElement("tr");
 
-        for (cell of row) {
+        for (const [x, cell] of row.entries()) {
             const dataElement = document.createElement("td");
 
             const valueElement = document.createElement("input");
             valueElement.style.width = "70px";
             valueElement.style.fontSize = "12px";
             valueElement.value = cell;
+
+            valueElement.oninput = () => {
+                respond("set", {
+                    "row": y,
+                    "col": x,
+                    "value": valueElement.value
+                });
+            };
 
             dataElement.appendChild(valueElement);
 

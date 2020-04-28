@@ -13,7 +13,8 @@ class ExcelConsumer(WebsocketConsumer):
 
     def connect(self):
         self.handlers = {
-            "connect": self.connected
+            "connect": self.connected,
+            "set": self.set
         }
 
         self.accept()
@@ -29,6 +30,11 @@ class ExcelConsumer(WebsocketConsumer):
             "d": data
         }, default=lambda x: x.__dict__))
 
+    def update(self):
+        self.send_event("update", {
+            "table": table.values
+        })
+
     def connected(self, data):
         if "name" not in data:
             self.close(self.INVALID_PAYLOAD)
@@ -41,9 +47,17 @@ class ExcelConsumer(WebsocketConsumer):
             "color": self.color
         })
 
-        self.send_event("update", {
-            "table": table.values
-        })
+        self.update()
+
+    def set(self, data):
+        if "row" not in data or "col" not in data or "value" not in data:
+            self.close(self.INVALID_PAYLOAD)
+
+        table.set(int(data["row"]), int(data["col"]), data["value"])
+
+        for player in self.players:
+            if player is not self:
+                player.update()
 
     def receive(self, text_data):
         message = json.loads(text_data)

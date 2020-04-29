@@ -2,33 +2,57 @@ const ws = new WebSocket(`ws://${window.location.host}/ws/`);
 
 function respond(event, data) {
     ws.send(JSON.stringify({
-        "e": event,
-        "d": data
+        e: event,
+        d: data
     }));
+}
+
+let editing = null;
+
+const inputElement = document.getElementById("input");
+
+inputElement.oninput = e => {
+    if (editing) {
+        editing.value = e.target.value;
+    }
 }
 
 function update(data) {
     const excel = document.getElementById("excel");
-
     excel.textContent = "";
 
     for (const [y, row] of data.table.entries()) {
         const rowElement = document.createElement("tr");
 
-        for (const [x, cell] of row.entries()) {
+        for (const [x, cellValue] of row.entries()) {
             const dataElement = document.createElement("td");
 
             const valueElement = document.createElement("input");
+            valueElement.type = "text";
             valueElement.style.width = "70px";
+            valueElement.style.height = "17px";
             valueElement.style.fontSize = "12px";
-            valueElement.value = cell;
+            valueElement.value = cellValue;
 
-            valueElement.oninput = () => {
+            valueElement.oninput = function (e) {
+                inputElement.value = e.target.value;
+
                 respond("set", {
-                    "row": y,
-                    "col": x,
-                    "value": valueElement.value
+                    row: y,
+                    col: x,
+                    value: e.target.value
                 });
+            };
+
+            valueElement.onfocus = function (e) {
+                if (editing) {
+                    editing.classList.remove("selected");
+                }
+
+                editing = e.target;
+                inputElement.value = editing.value;
+
+                editing.classList.add("selected");
             };
 
             dataElement.appendChild(valueElement);
@@ -41,12 +65,12 @@ function update(data) {
 }
 
 const handlers = {
-    "update": update
+    update: update
 };
 
 ws.onopen = function(e) {
     respond("connect", {
-        "name": "Excel_Fan1001"
+        name: "Excel_Fan1001"
     })
 }
 

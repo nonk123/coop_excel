@@ -7,17 +7,67 @@ function respond(event, data) {
     }));
 }
 
-let editing = null;
+let selection = {
+    x: 0,
+    y: 0,
+    w: 1,
+    h: 1
+};
+
+let selectedCells = [];
 
 const inputElement = document.getElementById("input");
 
-inputElement.oninput = e => {
-    if (editing) {
-        editing.value = e.target.value;
+function cellEdited(e) {
+    if (selection) {
+        inputElement.value = e.target.value;
+
+        for (const cell of selectedCells) {
+            cell.value = e.target.value;
+            cell.set();
+        }
     }
 }
 
+inputElement.oninput = cellEdited;
+
 const excel = document.getElementById("excel");
+
+function updateSelection() {
+    for (const cell of selectedCells) {
+        cell.classList.remove("selected");
+    }
+
+    selectedCells = [];
+
+    let bx = selection.x;
+    let by = selection.y;
+
+    let ex = bx + selection.w;
+    let ey = by + selection.h;
+
+    if (ex < bx) {
+        [ex, bx] = [bx, ex];
+    }
+
+    ex++;
+
+    if (ey < by) {
+        [ey, by] = [by, ey];
+    }
+
+    ey++;
+
+    for (const row of [...excel.rows].slice(by, ey)) {
+        for (const td of [...row.cells].slice(bx, ex)) {
+            selectedCells.push(td.children[0]);
+        }
+    }
+
+    for (const cell of selectedCells) {
+        cell.classList.add("selected");
+    }
+}
 
 function redraw(table) {
     excel.textContent = "";
@@ -35,33 +85,52 @@ function redraw(table) {
             valueElement.style.fontSize = "12px";
             valueElement.value = cellValue;
 
-            valueElement.oninput = function (e) {
-                inputElement.value = e.target.value;
+            valueElement.x = x;
+            valueElement.y = y;
 
+            valueElement.row = y;
+            valueElement.col = x;
+
+            valueElement.set = function () {
                 respond("set", {
                     row: y,
                     col: x,
-                    value: e.target.value
+                    value: valueElement.value
                 });
-            };
+            }
+
+            valueElement.oninput = cellEdited;
+
+            valueElement.onmousedown = function(e) {
+                if (e.shiftKey) {
+                    selection.w = e.target.x - selection.x;
+                    selection.h = e.target.y - selection.y;
+
+                    updateSelection();
+
+                    e.preventDefault();
+                }
+            }
 
             valueElement.onfocus = function (e) {
-                if (editing) {
-                    editing.classList.remove("selected");
-                }
+                selection.x = x;
+                selection.y = y;
+
+                selection.w = 0;
+                selection.h = 0;
 
                 editing = e.target;
                 inputElement.value = editing.value;
 
-                editing.classList.add("selected");
+                updateSelection();
             };
 
             dataElement.appendChild(valueElement);
 
             rowElement.appendChild(dataElement);
-        }
 
-        excel.appendChild(rowElement);
+            excel.appendChild(rowElement);
+        }
     }
 }
 

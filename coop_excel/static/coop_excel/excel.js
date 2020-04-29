@@ -33,6 +33,33 @@ inputElement.oninput = cellEdited;
 
 const excel = document.getElementById("excel");
 
+function range(x, y, w, h) {
+    let ex = x + selection.w;
+    let ey = y + selection.h;
+
+    if (ex < x) {
+        [ex, x] = [x, ex];
+    }
+
+    ex++;
+
+    if (ey < y) {
+        [ey, y] = [y, ey];
+    }
+
+    ey++;
+
+    const range = [];
+
+    for (const row of [...excel.rows].slice(y, ey)) {
+        for (const td of [...row.cells].slice(x, ex)) {
+            range.push(td.children[0]);
+        }
+    }
+
+    return range;
+}
+
 function updateSelection() {
     for (const cell of selectedCells) {
         cell.classList.remove("selected");
@@ -40,32 +67,64 @@ function updateSelection() {
 
     selectedCells = [];
 
-    let bx = selection.x;
-    let by = selection.y;
-
-    let ex = bx + selection.w;
-    let ey = by + selection.h;
-
-    if (ex < bx) {
-        [ex, bx] = [bx, ex];
-    }
-
-    ex++;
-
-    if (ey < by) {
-        [ey, by] = [by, ey];
-    }
-
-    ey++;
-
-    for (const row of [...excel.rows].slice(by, ey)) {
-        for (const td of [...row.cells].slice(bx, ex)) {
-            selectedCells.push(td.children[0]);
-        }
+    for (const cell of range(selection.x, selection.y, selection.w, selection.h)) {
+        selectedCells.push(cell);
     }
 
     for (const cell of selectedCells) {
         cell.classList.add("selected");
+    }
+}
+
+document.ondragover = function(e) {
+    e.preventDefault();
+}
+
+let dragging = null;
+
+function setListeners(elt) {
+    elt.oninput = cellEdited;
+
+    elt.onmousedown = function(e) {
+        if (e.shiftKey) {
+            selection.w = e.target.x - selection.x;
+            selection.h = e.target.y - selection.y;
+
+            updateSelection();
+
+            e.preventDefault();
+        }
+    };
+
+    elt.onfocus = function(e) {
+        selection.x = e.target.x;
+        selection.y = e.target.y;
+
+        selection.w = 0;
+        selection.h = 0;
+
+        editing = e.target;
+        inputElement.value = editing.value;
+
+        updateSelection();
+    };
+
+    elt.ondrag = function(e) {
+        dragging = e.target;
+    };
+
+    elt.ondragend = function(e) {
+        dragging = null;
+    }
+
+    elt.ondrop = function(e) {
+        if (dragging) {
+            const cells = range(e.target.x, e.target.y, selection.w, selection.h);
+
+            for (const i in cells) {
+                cells[i].value = selectedCells[i].value;
+            }
+        }
     }
 }
 
@@ -80,6 +139,7 @@ function redraw(table) {
 
             const valueElement = document.createElement("input");
             valueElement.type = "text";
+            valueElement.draggable = "true";
             valueElement.style.width = "70px";
             valueElement.style.height = "17px";
             valueElement.style.fontSize = "12px";
@@ -91,39 +151,15 @@ function redraw(table) {
             valueElement.row = y;
             valueElement.col = x;
 
-            valueElement.set = function () {
+            valueElement.set = function() {
                 respond("set", {
                     row: y,
                     col: x,
                     value: valueElement.value
                 });
-            }
-
-            valueElement.oninput = cellEdited;
-
-            valueElement.onmousedown = function(e) {
-                if (e.shiftKey) {
-                    selection.w = e.target.x - selection.x;
-                    selection.h = e.target.y - selection.y;
-
-                    updateSelection();
-
-                    e.preventDefault();
-                }
-            }
-
-            valueElement.onfocus = function (e) {
-                selection.x = x;
-                selection.y = y;
-
-                selection.w = 0;
-                selection.h = 0;
-
-                editing = e.target;
-                inputElement.value = editing.value;
-
-                updateSelection();
             };
+
+            setListeners(valueElement);
 
             dataElement.appendChild(valueElement);
 

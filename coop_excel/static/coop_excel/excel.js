@@ -71,8 +71,6 @@ function updateSelections(selections) {
     for (const selection of selections) {
         const selected = range(selection.x, selection.y, selection.w, selection.h);
 
-        console.log(selected.length);
-
         for (const cell of selected) {
             cell.selection = selection.color;
         }

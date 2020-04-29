@@ -35,6 +35,15 @@ class ExcelConsumer(WebsocketConsumer):
             "table": table.values
         })
 
+    def delta(self, row, col, value):
+        self.send_event("update", {
+            "delta": {
+                "row": row,
+                "col": col,
+                "value": value
+            }
+        })
+
     def connected(self, data):
         if "name" not in data:
             self.close(self.INVALID_PAYLOAD)
@@ -53,11 +62,14 @@ class ExcelConsumer(WebsocketConsumer):
         if "row" not in data or "col" not in data or "value" not in data:
             self.close(self.INVALID_PAYLOAD)
 
-        table.set(int(data["row"]), int(data["col"]), data["value"])
+        row, col = int(data["row"]), int(data["col"])
+        value = data["value"]
+
+        table.set(row, col, value)
 
         for player in self.players:
             if player is not self:
-                player.update()
+                player.delta(row, col, value)
 
     def receive(self, text_data):
         message = json.loads(text_data)

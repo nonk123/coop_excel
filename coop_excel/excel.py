@@ -2,6 +2,17 @@ class Cell:
     def __init__(self, value):
         self.value = value
 
+    @property
+    def value(self):
+        return self.__value
+
+    @value.setter
+    def value(self, value):
+        try:
+            self.__value = int(value)
+        except:
+            self.__value = value
+
 class Table:
     def __init__(self, width, height):
         self.width = width

@@ -17,11 +17,12 @@ inputElement.oninput = e => {
     }
 }
 
-function update(data) {
-    const excel = document.getElementById("excel");
+const excel = document.getElementById("excel");
+
+function redraw(table) {
     excel.textContent = "";
 
-    for (const [y, row] of data.table.entries()) {
+    for (const [y, row] of table.entries()) {
         const rowElement = document.createElement("tr");
 
         for (const [x, cellValue] of row.entries()) {
@@ -61,6 +62,20 @@ function update(data) {
         }
 
         excel.appendChild(rowElement);
+    }
+}
+
+function applyDelta(delta) {
+    excel.rows[delta.row].cells[delta.col].children[0].value = delta.value;
+}
+
+function update(data) {
+    if (data.table) {
+        redraw(data.table);
+    }
+
+    if (data.delta && excel.children.length) {
+        applyDelta(data.delta);
     }
 }
 

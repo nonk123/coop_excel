@@ -123,6 +123,7 @@ function setListeners(elt) {
 
             for (const i in cells) {
                 cells[i].value = selectedCells[i].value;
+                cells[i].set();
             }
         }
     }

@@ -14,8 +14,11 @@ class ExcelConsumer(WebsocketConsumer):
     def connect(self):
         self.handlers = {
             "connect": self.connected,
+            "update": self.updated,
             "set": self.set
         }
+
+        self.selection = {}
 
         self.accept()
 
@@ -70,6 +73,17 @@ class ExcelConsumer(WebsocketConsumer):
         for player in self.players:
             if player is not self:
                 player.delta(row, col, value)
+
+    def updated(self, data):
+        if "selection" in data:
+            self.selection = data["selection"]
+
+            selections = [other.selection for other in self.players if other.selection]
+
+            for player in self.players:
+                player.send_event("update", {
+                    "selections": selections
+                })
 
     def receive(self, text_data):
         message = json.loads(text_data)

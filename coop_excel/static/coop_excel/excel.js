@@ -8,6 +8,7 @@ function respond(event, data) {
 }
 
 let selection = {
+    color: "gray",
     x: 0,
     y: 0,
     w: 1,
@@ -34,8 +35,8 @@ inputElement.oninput = cellEdited;
 const excel = document.getElementById("excel");
 
 function range(x, y, w, h) {
-    let ex = x + selection.w;
-    let ey = y + selection.h;
+    let ex = x + w;
+    let ey = y + h;
 
     if (ex < x) {
         [ex, x] = [x, ex];
@@ -60,20 +61,36 @@ function range(x, y, w, h) {
     return range;
 }
 
-function updateSelection() {
-    for (const cell of selectedCells) {
-        cell.classList.remove("selected");
+function updateSelections(selections) {
+    for (const row of excel.rows) {
+        for (const td of row.cells) {
+            td.children[0].selection = null;
+        }
     }
 
+    for (const selection of selections) {
+        const selected = range(selection.x, selection.y, selection.w, selection.h);
+
+        console.log(selected.length);
+
+        for (const cell of selected) {
+            cell.selection = selection.color;
+        }
+    }
+
+    redraw();
+}
+
+function updateSelection() {
     selectedCells = [];
 
     for (const cell of range(selection.x, selection.y, selection.w, selection.h)) {
         selectedCells.push(cell);
     }
 
-    for (const cell of selectedCells) {
-        cell.classList.add("selected");
-    }
+    respond("update", {
+        selection: selection
+    });
 }
 
 document.ondragover = function(e) {
@@ -129,14 +146,14 @@ function setListeners(elt) {
     }
 }
 
-function redraw(table) {
-    excel.textContent = "";
+let table = [];
 
+function generateTable() {
     for (const [y, row] of table.entries()) {
         const rowElement = document.createElement("tr");
 
         for (const [x, cellValue] of row.entries()) {
-            const dataElement = document.createElement("td");
+            const td = document.createElement("td");
 
             const valueElement = document.createElement("input");
             valueElement.type = "text";
@@ -162,11 +179,29 @@ function redraw(table) {
 
             setListeners(valueElement);
 
-            dataElement.appendChild(valueElement);
+            td.appendChild(valueElement);
 
-            rowElement.appendChild(dataElement);
+            rowElement.appendChild(td);
+        }
 
-            excel.appendChild(rowElement);
+        excel.appendChild(rowElement);
+    }
+}
+
+function redraw() {
+    if (!excel.children.length) {
+        generateTable();
+    }
+
+    for (const row of excel.rows) {
+        for (const td of row.cells) {
+            const cell = td.children[0];
+
+            if (cell.selection) {
+                cell.style.background = cell.selection;
+            } else {
+                cell.style.background = "white";
+            }
         }
     }
 }
@@ -177,15 +212,25 @@ function applyDelta(delta) {
 
 function update(data) {
     if (data.table) {
-        redraw(data.table);
+        table = data.table;
+        redraw();
     }
 
     if (data.delta && excel.children.length) {
         applyDelta(data.delta);
     }
+
+    if (data.selections) {
+        updateSelections(data.selections);
+    }
+}
+
+function authorized(data) {
+    selection.color = data.color;
 }
 
 const handlers = {
+    authorized: authorized,
     update: update
 };
 

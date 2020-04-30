@@ -13,10 +13,7 @@ REF = f"{addr()}"
 RANGE = f"{addr('start_')}-{addr('end_')}"
 
 def ref(table, row, col):
-    try:
-        return table.get(int(row), int(col)).value
-    except:
-        return None
+    return table.get(int(row), int(col)).value
 
 def symbol(table, symbol):
     return symbol
@@ -46,19 +43,21 @@ class Cell:
             REF: ref
         }
 
-        for pattern, parser in parsers.items():
+        for pattern, result in parsers.items():
             match = re.fullmatch(pattern, split[1].strip())
 
             if match:
                 kwargs = {}
 
-                args = parser.__code__.co_varnames[1:parser.__code__.co_argcount]
+                args = result.__code__.co_varnames[1:result.__code__.co_argcount]
 
                 for var in args:
                     kwargs[var] = match.group(var)
 
-                value = parser(self.table, **kwargs)
-
-                return "<ERROR>" if value is None else value
+                try:
+                    value = result(self.table, **kwargs)
+                    return "<ERROR>" if value is None else value
+                except:
+                    return "<ERROR>"
 
         return self.expression

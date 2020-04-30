@@ -28,7 +28,7 @@ function cellEdited(e) {
         inputElement.value = e.target.value;
 
         for (const cell of selectedCells) {
-            cell.value = e.target.value;
+            cell.expression = e.target.value;
             cell.set();
         }
     }

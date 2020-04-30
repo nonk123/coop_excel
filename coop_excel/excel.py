@@ -1,4 +1,33 @@
-from .cell import Cell
+import re
+
+from .lisp import evaluate
+
+class Cell:
+    def __init__(self, expr, table):
+        self.expression = expr
+        self.table = table
+
+    @property
+    def expression(self):
+        return self.__expression
+
+    @expression.setter
+    def expression(self, expr):
+        self.__expression = str(expr)
+
+    @property
+    def value(self):
+        split = re.split(r"=\s*(?!$)", self.expression, 2)
+
+        if len(split) != 2:
+            return self.expression
+
+        result = evaluate(self.table, split[1].strip())
+
+        if result is None:
+            return "<ERROR>"
+        else:
+            return result
 
 class Table:
     def __init__(self, width, height):

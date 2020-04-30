@@ -1,5 +1,9 @@
 const ws = new WebSocket(`ws://${window.location.host}/ws/`);
 
+ws.onclose = function(e) {
+    console.log(`Connection closed: ${e.code}`);
+}
+
 function respond(event, data) {
     ws.send(JSON.stringify({
         e: event,
@@ -119,9 +123,11 @@ function setListeners(elt) {
         selection.h = 0;
 
         editing = e.target;
-        inputElement.value = editing.value;
+        inputElement.value = editing.expression || editing.value;
 
         updateSelection();
+
+        inputElement.focus();
     };
 
     elt.ondrag = function(e) {
@@ -150,7 +156,7 @@ function generateTable() {
     for (const [y, row] of table.entries()) {
         const rowElement = document.createElement("tr");
 
-        for (const [x, cellValue] of row.entries()) {
+        for (const [x, cell] of row.entries()) {
             const td = document.createElement("td");
 
             const valueElement = document.createElement("input");
@@ -159,7 +165,9 @@ function generateTable() {
             valueElement.style.width = "70px";
             valueElement.style.height = "17px";
             valueElement.style.fontSize = "12px";
-            valueElement.value = cellValue;
+
+            valueElement.value = cell.value;
+            valueElement.expression = cell.expression;
 
             valueElement.x = x;
             valueElement.y = y;
@@ -171,7 +179,7 @@ function generateTable() {
                 respond("set", {
                     row: y,
                     col: x,
-                    value: valueElement.value
+                    expression: inputElement.value || valueElement.expression
                 });
             };
 
@@ -205,7 +213,10 @@ function redraw() {
 }
 
 function applyDelta(delta) {
-    excel.rows[delta.row].cells[delta.col].children[0].value = delta.value;
+    const cell = excel.rows[delta.row].cells[delta.col].children[0];
+
+    cell.expression = delta.expression;
+    cell.value = delta.value;
 }
 
 function update(data) {

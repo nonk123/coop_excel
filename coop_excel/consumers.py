@@ -35,21 +35,23 @@ class ExcelConsumer(WebsocketConsumer):
 
     def update(self):
         self.send_event("update", {
-            "table": table.values
+            "table": table.networked,
+            "selections": self.selections
         })
 
-    def delta(self, row, col, value):
+    def delta(self, row, col, expr, value):
         self.send_event("update", {
             "delta": {
                 "row": row,
                 "col": col,
-                "value": value
+                "value": value,
+                "expression": expr
             }
         })
 
     def connected(self, data):
         if "name" not in data:
-            self.close(self.INVALID_PAYLOAD)
+            return self.close(self.INVALID_PAYLOAD)
 
         self.name = data["name"]
         self.color = self.COLORS[(len(self.players) - 1) % len(self.COLORS)]
@@ -62,27 +64,26 @@ class ExcelConsumer(WebsocketConsumer):
         self.update()
 
     def set(self, data):
-        if "row" not in data or "col" not in data or "value" not in data:
-            self.close(self.INVALID_PAYLOAD)
+        if "row" not in data or "col" not in data or "expression" not in data:
+            return self.close(self.INVALID_PAYLOAD)
 
         row, col = int(data["row"]), int(data["col"])
-        value = data["value"]
-
-        table.set(row, col, value)
+        e, v = table.set(row, col, data["expression"])
 
         for player in self.players:
-            if player is not self:
-                player.delta(row, col, value)
+            player.delta(row, col, e, v)
+
+    @property
+    def selections(self):
+        return [other.selection for other in self.players if other.selection]
 
     def updated(self, data):
         if "selection" in data:
             self.selection = data["selection"]
 
-            selections = [other.selection for other in self.players if other.selection]
-
             for player in self.players:
                 player.send_event("update", {
-                    "selections": selections
+                    "selections": self.selections
                 })
 
     def receive(self, text_data):

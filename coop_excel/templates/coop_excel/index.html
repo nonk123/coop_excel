@@ -6,22 +6,18 @@
         <title>Co-op Excel</title>
     </head>
     <style>
-     body {
+     body, main {
          margin: 0;
      }
 
      main {
-         width: 100vw;
-         padding-top: 28px;
-         overflow: scroll;
-         scrollbar-width: thin;
+         padding-top: 30px;
      }
     </style>
     <body>
         <div id="toolbar">
-            <span style="width: 100vw; height: 17px;">
-                <input type="text" id="input" autocomplete="off"></input>
-            </span>
+            <input type="text" id="input" autocomplete="off"></input>
+            <a id="need-help" href="doc/">Need help?</a>
         </div>
         <main id="main_view">
             <table id="excel"></table>

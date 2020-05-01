@@ -1,8 +1,5 @@
-body, * {
-    background: #12130F;
-}
-
 * {
+    background: #12130F;
     color: #E8E9F3;
     font-size: 15px;
     font-family: monospace;
@@ -13,7 +10,7 @@ p {
     margin: 8px;
 }
 
-div, span, .doc {
+div, span, input, .doc {
     background: #37393A;
 }
 
@@ -24,12 +21,12 @@ div, span, .doc {
 }
 
 .doc {
-    padding: 1px;
+    margin: 0px;
+    padding: 4px;
 }
 
-.fname, .arg {
+.fname {
     color: #77B6EA;
-    font-size: 16px;
 }
 
 .arg {
@@ -53,23 +50,29 @@ div, span, .doc {
 }
 
 input {
+    border: 2px solid #12130F;
     font-family: monospace;
     border: none;
 }
 
 #excel, td {
-    border: 2px solid #37393A;
     border-collapse: collapse;
 }
 
 #toolbar {
+    background: #12130F;
     width: 100vw;
-    height: 24px;
+    height: 30px;
+    padding: 3px;
     position: fixed;
 }
 
+#need-help {
+    text-align: center;
+}
+
 #input {
-    width: 100%;
+    width: calc(100% - 120px);
     height: 100%;
     border: 2px solid #37393A;
     border-radius: 4px;

@@ -64,8 +64,10 @@ class ExcelConsumer(WebsocketConsumer):
 
         table.set(int(data["row"]), int(data["col"]), data["expression"])
 
+        delta = table.delta()
+
         for player in self.players:
-            player.update(delta=table.delta())
+            player.update(delta=delta)
 
     @property
     def selections(self):

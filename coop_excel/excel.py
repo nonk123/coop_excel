@@ -22,7 +22,7 @@ class Cell:
         if len(split) != 2:
             return self.expression
 
-        result = evaluate(self.table, split[1].strip())
+        result = evaluate(self.table, split[1])
 
         if result is None:
             return "<ERROR>"

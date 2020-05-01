@@ -30,6 +30,8 @@ def evaluate(table, expression):
     if not form:
         return None
 
+    form = [x.strip() for x in form if x.strip()]
+
     fun = form[0]
     args = form[1:]
 

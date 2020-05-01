@@ -192,6 +192,10 @@ function generateTable() {
 
         excel.appendChild(rowElement);
     }
+
+    selectedCells = [];
+
+    excel.rows[0].cells[0].children[0].focus();
 }
 
 function redraw() {

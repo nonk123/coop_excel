@@ -8,7 +8,8 @@ from .excel import table
 class ExcelConsumer(WebsocketConsumer):
     INVALID_PAYLOAD = 4004
 
-    COLORS = ("red", "green", "blue", "yellow", "cyan", "magenta", "saddlebrown", "gray")
+    COLORS = ("darkred", "darkgreen", "darkblue", "darkgoldenrod", "darkcyan",
+              "darkmagenta", "saddlebrown")
 
     players = []
 

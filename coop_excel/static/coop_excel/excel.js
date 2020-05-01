@@ -144,8 +144,22 @@ function setListeners(elt) {
         dragging = null;
     }
 
+    elt.ondragenter = function(e) {
+        if (dragging) {
+            e.target.style.background = selection.color;
+        }
+    }
+
+    elt.ondragleave = function(e) {
+        if (dragging) {
+            e.target.style.background = "";
+        }
+    }
+
     elt.ondrop = function(e) {
         if (dragging) {
+            e.target.style.background = "";
+
             const cells = range(e.target.x, e.target.y, selection.w, selection.h);
 
             for (const i in cells) {
@@ -154,6 +168,8 @@ function setListeners(elt) {
             }
 
             flushSetCells();
+
+            e.target.focus();
         }
     }
 }

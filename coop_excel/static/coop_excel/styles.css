@@ -50,12 +50,12 @@ div, span, input, .doc {
 }
 
 input {
-    border: 2px solid #12130F;
     font-family: monospace;
     border: none;
 }
 
 #excel, td {
+    border: 3px solid #12130F;
     border-collapse: collapse;
 }
 

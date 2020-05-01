@@ -23,6 +23,12 @@ let selectedCells = [];
 
 const inputElement = document.getElementById("input");
 
+inputElement.onkeypress = function(e) {
+    if (e.key == "Enter") {
+        flushSetCells();
+    }
+}
+
 function cellEdited(e) {
     if (selection) {
         inputElement.value = e.target.value;
@@ -146,6 +152,8 @@ function setListeners(elt) {
                 cells[i].expression = selectedCells[i].expression;
                 cells[i].set();
             }
+
+            flushSetCells();
         }
     }
 }
@@ -155,14 +163,24 @@ let table = [];
 function updateTable(delta) {
     for (cell of delta) {
         if (!table[cell.row]) {
-            table[cell.row] = []
+            table[cell.row] = [];
         }
 
         table[cell.row][cell.col] = {
             expression: cell.expression,
             value: cell.value
-        }
+        };
     }
+}
+
+let setCells = [];
+
+function flushSetCells() {
+    respond("set", {
+        "cells": setCells
+    });
+
+    setCells = [];
 }
 
 function displayTable() {
@@ -189,7 +207,7 @@ function displayTable() {
             valueElement.col = x;
 
             valueElement.set = function() {
-                respond("set", {
+                setCells.push({
                     row: y,
                     col: x,
                     expression: inputElement.value || valueElement.expression
@@ -208,7 +226,9 @@ function displayTable() {
 
     selectedCells = [];
 
-    excel.rows[0].cells[0].children[0].focus();
+    if (excel.rows.length) {
+        excel.rows[0].cells[0].children[0].focus();
+    }
 }
 
 function redraw() {

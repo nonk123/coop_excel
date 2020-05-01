@@ -38,6 +38,15 @@ class Cell:
         else:
             return result
 
+    @property
+    def stripped(self):
+        return {
+            "expression": self.expression,
+            "value": self.value,
+            "row": self.row,
+            "col": self.col
+        }
+
 class Table:
     def __init__(self, width, height):
         self.width = width
@@ -51,7 +60,7 @@ class Table:
 
             for col in range(self.width):
                 self.rows[-1].append(None)
-                self.set(row, col, "= (* (row) (col))")
+                self.set(row, col, row * col)
 
     def is_in_bounds(self, row, col):
         return row in range(self.height) and col in range(self.width)
@@ -62,33 +71,51 @@ class Table:
         else:
             return Cell("", self, row, col)
 
-    def set(self, row, col, expression):
-        if self.is_in_bounds(row, col):
-            self.rows[row][col] = Cell(expression, self, row, col)
+    def set(self, row, col, expr):
+        self.rows[row][col] = Cell(expr, self, row, col)
+
+    def update_with_stripped(self, stripped):
+        for cell in stripped:
+            row = int(cell["row"])
+            col = int(cell["col"])
+
+            if self.is_in_bounds(row, col):
+                self.set(row, col, cell["expression"])
+
+    @property
+    def _empty_stripped(self):
+        empty = []
+
+        for table_row in self.rows:
+            empty.append([{} for x in enumerate(table_row)])
+
+        return empty
 
     def delta(self, base=None):
         delta = []
 
+        if not self.last:
+            self.last = self._empty_stripped
+
         if base is None:
             base = self.last
+        elif len(base) == 0:
+            base = self._empty_stripped
 
-        self.last = []
+        this = []
 
-        for row, table_row in enumerate(self.rows):
-            self.last.append([])
+        for row, table_row in enumerate(base):
+            this.append([])
 
-            for col, cell in enumerate(table_row):
-                d = {
-                    "expression": cell.expression,
-                    "value": cell.value,
-                    "row": row,
-                    "col": col
-                }
+            for col, old in enumerate(table_row):
+                new = self.get(row, col).stripped
 
-                if not base or base[row][col] != d:
-                    delta.append(d)
+                if old != new:
+                    delta.append(new)
 
-                self.last[-1].append(d)
+                this[-1].append(new)
+
+        self.last = this
 
         return delta
 

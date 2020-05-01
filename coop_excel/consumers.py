@@ -59,10 +59,10 @@ class ExcelConsumer(WebsocketConsumer):
         self.update(delta=table.delta([]))
 
     def set(self, data):
-        if "row" not in data or "col" not in data or "expression" not in data:
+        if "cells" not in data:
             return self.close(self.INVALID_PAYLOAD)
 
-        table.set(int(data["row"]), int(data["col"]), data["expression"])
+        table.update_with_stripped(data["cells"])
 
         delta = table.delta()
 

@@ -193,9 +193,7 @@ function displayTable() {
             const valueElement = document.createElement("input");
             valueElement.type = "text";
             valueElement.draggable = "true";
-            valueElement.style.width = "70px";
-            valueElement.style.height = "17px";
-            valueElement.style.fontSize = "12px";
+            valueElement.classList.add("cell");
 
             valueElement.value = cell.value;
             valueElement.expression = cell.expression;
@@ -243,7 +241,7 @@ function redraw() {
             if (cell.selection) {
                 cell.style.background = cell.selection;
             } else {
-                cell.style.background = "white";
+                cell.style.background = "";
             }
 
             cell.value = table[row][col].value;

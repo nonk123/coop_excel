@@ -1,4 +1,7 @@
 import os
+import os.path
+
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 
@@ -9,7 +12,6 @@ ALLOWED_HOSTS = (os.getenv("ALLOWED_HOSTS") or "").split(",")
 INSTALLED_APPS = [
     'coop_excel',
     'channels',
-    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -42,7 +44,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
             ],
         },
-    },
+    }
 ]
 
 WSGI_APPLICATION = 'coop_excel.wsgi.application'

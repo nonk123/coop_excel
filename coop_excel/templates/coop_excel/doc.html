@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+    {% load static %}
+    <head>
+        <link rel="stylesheet" href="{% static "coop_excel/styles.css" %}">
+        <title>Function documentation</title>
+    </head>
+    <body>
+        {% if show_help %}
+        <h1>Help</h1>
+        <p>Click a cell to select it. Shift-click again to select a rectangle
+            region</p>
+        <p>Input text in the top field to change the selected cells' value.
+            Press Enter to commit your changes.</p>
+        <p>Start Lisp expressions with a '='. Examples:</p>
+        <div class="code">=(+ 1 2)</div>
+        <div class="code">=(1- (at 0 1))</div>
+        <p>See function synopsis below for more info.</p>
+        <h1>Functions</h1>
+        {% endif %}
+        {% for info in functions %}
+        {% if not info.found %}
+        Function <span class="fname">{{ info.name }}</span> not found.
+        {% else %}
+        <div class="help">
+            <div class="decl">
+                (<span class="fname">{{ info.name }}</span>
+                {% for arg in info.args %}
+                <span class="arg">{{ arg|upper }}{% if arg == "rest" %}...{% endif %}</span>{% endfor %})
+            </div>
+            <p class="doc">
+                {% if info.doc %}
+                {{ info.doc }}
+                {% else %}
+                Self-explanatory.
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </body>
+</html>

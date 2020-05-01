@@ -75,6 +75,7 @@ def lisp_fn(name=None):
 
 @lisp_fn()
 def at(ctx, row, col):
+    """Get the cell's value at ROW and COL."""
     return ctx["table"].get(int(row), int(col)).value
 
 def reduce(fun, *args):
@@ -90,10 +91,13 @@ def reduce(fun, *args):
 
 @lisp_fn("+")
 def add(ctx, a, b, *rest):
+    """Add two or more numbers."""
     return reduce(lambda x, y: x + y, a, b, *rest)
 
 @lisp_fn("-")
 def subtract(ctx, a, *rest):
+    """Subtract two or more numbers. Negate A if it is the only parameter."""
+
     if not rest:
         return -a
     else:
@@ -101,24 +105,30 @@ def subtract(ctx, a, *rest):
 
 @lisp_fn("*")
 def multiply(ctx, a, b, *rest):
+    """Multiply two or more numbers."""
     return reduce(lambda x, y: x * y, a, b, *rest)
 
 @lisp_fn("/")
 def divide(ctx, a, b, *rest):
+    """Divide two or more numbers."""
     return reduce(lambda x, y: x / y, a, b, *rest)
 
 @lisp_fn("1+")
 def add_one(ctx, x):
+    """Same as (+ X 1)"""
     return x + 1
 
 @lisp_fn("1-")
 def subtract_one(ctx, x):
+    """Same as (- X 1)"""
     return x - 1
 
 @lisp_fn()
 def row(ctx):
+    """Get this cell's row."""
     return ctx["cell"].row
 
 @lisp_fn()
 def col(ctx):
+    """Get this cell's column."""
     return ctx["cell"].col

@@ -1,7 +1,7 @@
 from channels.generic.websocket import WebsocketConsumer
 
 import json
-import copy
+import random
 
 from .excel import table
 
@@ -52,7 +52,7 @@ class ExcelConsumer(WebsocketConsumer):
             return self.close(self.INVALID_PAYLOAD)
 
         self.name = data["name"]
-        self.color = self.COLORS[(len(self.players) - 1) % len(self.COLORS)]
+        self.color = random.choice(self.COLORS)
 
         self.send_event("authorized", {
             "name": self.name,

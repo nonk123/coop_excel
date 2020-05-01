@@ -28,6 +28,9 @@ class ExcelConsumer(WebsocketConsumer):
     def disconnect(self, close_code):
         self.players.remove(self)
 
+        for player in self.players:
+            player.update()
+
     def send_event(self, event, data):
         self.send(json.dumps({
             "e": event,

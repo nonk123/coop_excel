@@ -143,7 +143,7 @@ function setListeners(elt) {
             const cells = range(e.target.x, e.target.y, selection.w, selection.h);
 
             for (const i in cells) {
-                cells[i].value = selectedCells[i].value;
+                cells[i].expression = selectedCells[i].expression;
                 cells[i].set();
             }
         }
@@ -152,7 +152,20 @@ function setListeners(elt) {
 
 let table = [];
 
-function generateTable() {
+function updateTable(delta) {
+    for (cell of delta) {
+        if (!table[cell.row]) {
+            table[cell.row] = []
+        }
+
+        table[cell.row][cell.col] = {
+            expression: cell.expression,
+            value: cell.value
+        }
+    }
+}
+
+function displayTable() {
     for (const [y, row] of table.entries()) {
         const rowElement = document.createElement("tr");
 
@@ -200,37 +213,28 @@ function generateTable() {
 
 function redraw() {
     if (!excel.children.length) {
-        generateTable();
+        displayTable();
     }
 
-    for (const row of excel.rows) {
-        for (const td of row.cells) {
-            const cell = td.children[0];
+    for (const row in table) {
+        for (const col in table[row]) {
+            const cell = excel.rows[row].cells[col].children[0];
 
             if (cell.selection) {
                 cell.style.background = cell.selection;
             } else {
                 cell.style.background = "white";
             }
+
+            cell.value = table[row][col].value;
         }
     }
 }
 
-function applyDelta(delta) {
-    const cell = excel.rows[delta.row].cells[delta.col].children[0];
-
-    cell.expression = delta.expression;
-    cell.value = delta.value;
-}
-
 function update(data) {
     if (data.table) {
-        table = data.table;
+        updateTable(data.table);
         redraw();
-    }
-
-    if (data.delta && excel.children.length) {
-        applyDelta(data.delta);
     }
 
     if (data.selections) {

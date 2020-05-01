@@ -2,13 +2,11 @@ import re
 
 functions = {}
 
-def evaluate(table, expression):
-    form = re.fullmatch(r"\((?P<form>.*)\)", expression)
+MAX_RECURSION = 100
 
-    if not form:
-        return cast(expression)
-
-    expression = form.group("form")
+def evaluate_form(ctx, expression):
+    if ctx["recursion"] > MAX_RECURSION:
+        return None
 
     form = [""]
 
@@ -27,24 +25,32 @@ def evaluate(table, expression):
 
         form[-1] += c
 
+    form = [x.strip() for x in form if x.strip()]
+
     if not form:
         return None
-
-    form = [x.strip() for x in form if x.strip()]
 
     fun = form[0]
     args = form[1:]
 
     if fun in functions:
         try:
-            args = [evaluate(table, arg) for arg in args]
-            return cast(functions[fun](table, *args))
+            args = [evaluate(ctx, arg) for arg in args]
+            return cast(ctx, functions[fun](ctx, *args))
         except:
             return None
 
-    return None
+def evaluate(ctx, expression):
+    fun = re.fullmatch(r"\((?P<form>.*)\)", expression)
 
-def cast(expr):
+    ctx["recursion"] += 1
+
+    if fun:
+        return evaluate_form(ctx, fun.group("form"))
+    else:
+        return cast(ctx, expression)
+
+def cast(ctx, expr):
     if callable(expr):
         return expr
 
@@ -68,8 +74,8 @@ def lisp_fn(name=None):
     return decorator
 
 @lisp_fn()
-def at(table, row, col):
-    return table.get(int(row), int(col)).value
+def at(ctx, row, col):
+    return ctx["table"].get(int(row), int(col)).value
 
 def reduce(fun, *args):
     if not args:
@@ -83,20 +89,36 @@ def reduce(fun, *args):
     return x
 
 @lisp_fn("+")
-def add(table, *args):
-    return reduce(lambda x, y: x + y, *args)
+def add(ctx, a, b, *rest):
+    return reduce(lambda x, y: x + y, a, b, *rest)
 
 @lisp_fn("-")
-def subtract(table, *args):
-    if len(args) == 1:
-        return -args[0]
+def subtract(ctx, a, *rest):
+    if not rest:
+        return -a
     else:
-        return reduce(lambda x, y: x - y, *args)
+        return reduce(lambda x, y: x - y, a, *rest)
 
 @lisp_fn("*")
-def multiply(table, *args):
-    return reduce(lambda x, y: x * y, *args)
+def multiply(ctx, a, b, *rest):
+    return reduce(lambda x, y: x * y, a, b, *rest)
 
 @lisp_fn("/")
-def divide(table, *args):
-    return reduce(lambda x, y: x / y, *args)
+def divide(ctx, a, b, *rest):
+    return reduce(lambda x, y: x / y, a, b, *rest)
+
+@lisp_fn("1+")
+def add_one(ctx, x):
+    return x + 1
+
+@lisp_fn("1-")
+def subtract_one(ctx, x):
+    return x - 1
+
+@lisp_fn()
+def row(ctx):
+    return ctx["cell"].row
+
+@lisp_fn()
+def col(ctx):
+    return ctx["cell"].col

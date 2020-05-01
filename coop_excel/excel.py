@@ -1,11 +1,14 @@
 import re
+import copy
 
 from .lisp import evaluate
 
 class Cell:
-    def __init__(self, expr, table):
+    def __init__(self, expr, table, row, col):
         self.expression = expr
         self.table = table
+        self.row = row
+        self.col = col
 
     @property
     def expression(self):
@@ -22,7 +25,13 @@ class Cell:
         if len(split) != 2:
             return self.expression
 
-        result = evaluate(self.table, split[1])
+        ctx = {
+            "recursion": 0,
+            "table": self.table,
+            "cell": self,
+        }
+
+        result = evaluate(ctx, split[1])
 
         if result is None:
             return "<ERROR>"
@@ -35,12 +44,14 @@ class Table:
         self.height = height
 
         self.rows = []
+        self.last = []
 
-        for y in range(self.height):
+        for row in range(self.height):
             self.rows.append([])
 
-            for x in range(self.width):
-                self.rows[y].append(Cell(x + y, self))
+            for col in range(self.width):
+                self.rows[-1].append(None)
+                self.set(row, col, "= (* (row) (col))")
 
     def is_in_bounds(self, row, col):
         return row in range(self.height) and col in range(self.width)
@@ -49,24 +60,36 @@ class Table:
         if self.is_in_bounds(row, col):
             return self.rows[row][col]
         else:
-            return Cell("", self)
+            return Cell("", self, row, col)
 
     def set(self, row, col, expression):
         if self.is_in_bounds(row, col):
-            cell = self.get(row, col)
-            cell.expression = expression
-            return cell.expression, cell.value
+            self.rows[row][col] = Cell(expression, self, row, col)
 
-    @property
-    def networked(self):
-        values = []
+    def delta(self, base=None):
+        delta = []
 
-        for row in self.rows:
-            values.append([{
-                "value": cell.value,
-                "expression": cell.expression
-            } for cell in row])
+        if base is None:
+            base = self.last
 
-        return values
+        self.last = []
+
+        for row, table_row in enumerate(self.rows):
+            self.last.append([])
+
+            for col, cell in enumerate(table_row):
+                d = {
+                    "expression": cell.expression,
+                    "value": cell.value,
+                    "row": row,
+                    "col": col
+                }
+
+                if not base or base[row][col] != d:
+                    delta.append(d)
+
+                self.last[-1].append(d)
+
+        return delta
 
 table = Table(10, 50)

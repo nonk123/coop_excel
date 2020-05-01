@@ -1,6 +1,7 @@
 from channels.generic.websocket import WebsocketConsumer
 
 import json
+import copy
 
 from .excel import table
 
@@ -33,21 +34,15 @@ class ExcelConsumer(WebsocketConsumer):
             "d": data
         }, default=lambda x: x.__dict__))
 
-    def update(self):
-        self.send_event("update", {
-            "table": table.networked,
+    def update(self, **kwargs):
+        data = {
             "selections": self.selections
-        })
+        }
 
-    def delta(self, row, col, expr, value):
-        self.send_event("update", {
-            "delta": {
-                "row": row,
-                "col": col,
-                "value": value,
-                "expression": expr
-            }
-        })
+        if "delta" in kwargs:
+            data["table"] = kwargs["delta"]
+
+        self.send_event("update", data)
 
     def connected(self, data):
         if "name" not in data:
@@ -61,17 +56,16 @@ class ExcelConsumer(WebsocketConsumer):
             "color": self.color
         })
 
-        self.update()
+        self.update(delta=table.delta([]))
 
     def set(self, data):
         if "row" not in data or "col" not in data or "expression" not in data:
             return self.close(self.INVALID_PAYLOAD)
 
-        row, col = int(data["row"]), int(data["col"])
-        e, v = table.set(row, col, data["expression"])
+        table.set(int(data["row"]), int(data["col"]), data["expression"])
 
         for player in self.players:
-            player.delta(row, col, e, v)
+            player.update(delta=table.delta())
 
     @property
     def selections(self):
@@ -82,9 +76,7 @@ class ExcelConsumer(WebsocketConsumer):
             self.selection = data["selection"]
 
             for player in self.players:
-                player.send_event("update", {
-                    "selections": self.selections
-                })
+                player.update()
 
     def receive(self, text_data):
         message = json.loads(text_data)

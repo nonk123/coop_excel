@@ -1,4 +1,5 @@
 import re
+from multiprocessing.pool import ThreadPool
 
 from .lisp import evaluate
 
@@ -94,12 +95,15 @@ class Table:
         self.rows[row][col].expression = expr
 
     def update_with_stripped(self, stripped):
-        for cell in stripped:
+        def action(cell):
             row = int(cell["row"])
             col = int(cell["col"])
 
             if self.is_in_bounds(row, col):
                 self.set(row, col, cell["expression"])
+
+        with ThreadPool() as p:
+            p.map(action, stripped)
 
     @property
     def _empty_stripped(self):

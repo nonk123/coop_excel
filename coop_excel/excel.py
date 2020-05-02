@@ -4,38 +4,58 @@ from .lisp import evaluate
 
 class Cell:
     def __init__(self, expr, table, row, col):
+        self.__dependants = []
+
         self.expression = expr
         self.table = table
         self.row = row
         self.col = col
 
     @property
+    def dependants(self):
+        return self.__dependants
+
+    @property
     def expression(self):
         return self.__expression
+
+    def __reset_dependants(self):
+        self.__cached_value = None
+
+        for cell in self.dependants:
+            if cell.dependants:
+                cell.__reset_dependants()
+            else:
+                cell.__cached_value = None
+
+        self.dependants.clear()
 
     @expression.setter
     def expression(self, expr):
         self.__expression = str(expr)
+        self.__reset_dependants()
 
     @property
     def value(self):
+        if self.__cached_value is not None:
+            return self.__cached_value
+
         split = re.split(r"=\s*(?!$)", self.expression, 2)
 
         if len(split) != 2:
             return self.expression
 
         ctx = {
-            "recursion": 0,
             "table": self.table,
             "cell": self,
         }
 
-        result = evaluate(ctx, split[1])
+        self.__cached_value = evaluate(ctx, split[1])
 
-        if result is None:
+        if self.__cached_value is None:
             return "<ERROR>"
         else:
-            return result
+            return self.__cached_value
 
     @property
     def stripped(self):
@@ -59,7 +79,7 @@ class Table:
 
             for col in range(self.width):
                 self.rows[-1].append(None)
-                self.set(row, col, row * col)
+                self.rows[row][col] = Cell("", self, row, col)
 
     def is_in_bounds(self, row, col):
         return row in range(self.height) and col in range(self.width)
@@ -71,7 +91,7 @@ class Table:
             return Cell("", self, row, col)
 
     def set(self, row, col, expr):
-        self.rows[row][col] = Cell(expr, self, row, col)
+        self.rows[row][col].expression = expr
 
     def update_with_stripped(self, stripped):
         for cell in stripped:

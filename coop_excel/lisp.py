@@ -3,12 +3,7 @@ import inspect
 
 functions = {}
 
-MAX_RECURSION = 100
-
-def evaluate_form(ctx, expression):
-    if ctx["recursion"] > MAX_RECURSION:
-        return None
-
+def evaluate_form(ctx, expression, visited):
     form = [""]
 
     depth = 0
@@ -36,20 +31,38 @@ def evaluate_form(ctx, expression):
 
     if fun in functions:
         try:
-            args = [evaluate(ctx, arg) for arg in args]
+            args = [evaluate(ctx, arg, visited) for arg in args]
             return cast(ctx, functions[fun](ctx, *args))
         except:
             return None
 
-def evaluate(ctx, expression):
+def detect_cycle(v, l):
+    occurences = {}
+
+    for i, p in enumerate(l):
+        if p == v and l[i] != p:
+            occurences.setdefault(p, 0)
+            occurences[p] += 1
+
+    if v in occurences and occurences[v] > 1:
+        return True
+
+    l.append(v)
+
+    return False
+
+def evaluate(ctx, expression, visited=[]):
+    if detect_cycle((row(ctx), col(ctx)), visited):
+        return None
+
     fun = re.fullmatch(r"\((.*)\)", expression)
 
-    ctx["recursion"] += 1
-
     if fun:
-        return evaluate_form(ctx, fun.group(1))
+        ret = evaluate_form(ctx, fun.group(1), visited)
     else:
-        return cast(ctx, expression)
+        ret = cast(ctx, expression)
+
+    return ret
 
 def cast(ctx, expr):
     try:
@@ -65,14 +78,29 @@ def lisp_fn(*args):
 
         functions[real_name] = fn
 
-        fn.lisp_args = inspect.signature(fn).parameters.keys()
+        fn.lisp_args = []
+
+        for name, param in inspect.signature(fn).parameters.items():
+            name = name.upper()
+
+            if param.kind == param.VAR_KEYWORD:
+                fn.lisp_args.append(f"&key {name}")
+            elif param.kind == param.VAR_POSITIONAL:
+                fn.lisp_args.append(f"&rest {name}")
+            else:
+                fn.lisp_args.append(name)
+
+            if param.default != param.empty:
+                fn.lisp_args[-1] += f"={param.default}"
+
+        fn.lisp_args = fn.lisp_args[1:]
 
         for alias in names[1:]:
             def aliased(*args, **kwargs):
                 return fn(*args, **kwargs)
 
             aliased.__name__ = alias
-            aliased.__doc__ = f"""Alias for function `{real_name}'."""
+            aliased.__doc__ = f"""Alias for `{real_name}'."""
             aliased.lisp_args = fn.lisp_args
 
             functions[alias] = aliased
@@ -84,7 +112,12 @@ def lisp_fn(*args):
 @lisp_fn("at", "$")
 def at(ctx, row, col):
     """Get the cell's value at ROW and COL."""
-    return ctx["table"].get(int(row), int(col)).value
+    cell = ctx["table"].get(int(row), int(col))
+
+    if ctx["cell"] not in cell.dependants:
+        cell.dependants.append(ctx["cell"])
+
+    return cell.value
 
 def reduce(fun, *args):
     if not args:
@@ -98,28 +131,28 @@ def reduce(fun, *args):
     return x
 
 @lisp_fn("+")
-def add(ctx, a, b, *rest):
+def add(ctx, a, b, *etc):
     """Add two or more numbers."""
-    return reduce(lambda x, y: x + y, a, b, *rest)
+    return reduce(lambda x, y: x + y, a, b, *etc)
 
 @lisp_fn("-")
-def subtract(ctx, a, *rest):
+def subtract(ctx, a, *etc):
     """Subtract two or more numbers. Negate A if it is the only parameter."""
 
-    if not rest:
+    if not etc:
         return -a
     else:
-        return reduce(lambda x, y: x - y, a, *rest)
+        return reduce(lambda x, y: x - y, a, *etc)
 
 @lisp_fn("*")
-def multiply(ctx, a, b, *rest):
+def multiply(ctx, a, b, *etc):
     """Multiply two or more numbers."""
-    return reduce(lambda x, y: x * y, a, b, *rest)
+    return reduce(lambda x, y: x * y, a, b, *etc)
 
 @lisp_fn("/")
-def divide(ctx, a, b, *rest):
+def divide(ctx, a, b, *etc):
     """Divide two or more numbers."""
-    return reduce(lambda x, y: x / y, a, b, *rest)
+    return reduce(lambda x, y: x / y, a, b, *etc)
 
 @lisp_fn("1+")
 def add_one(ctx, x):
@@ -130,6 +163,16 @@ def add_one(ctx, x):
 def subtract_one(ctx, x):
     """Same as (- X 1)"""
     return x - 1
+
+@lisp_fn("above", "^")
+def above(ctx, n=1):
+    """Get the cell N above the current."""
+    return at(ctx, row(ctx) - n, col(ctx))
+
+@lisp_fn("below", "v")
+def below(ctx, n=1):
+    """Get the cell N below the current."""
+    return at(ctx, row(ctx) + n, col(ctx))
 
 @lisp_fn()
 def row(ctx):

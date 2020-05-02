@@ -94,6 +94,7 @@ function updateSelection() {
 
     for (const cell of range(selection.x, selection.y, selection.w, selection.h)) {
         selectedCells.push(cell);
+        cell.set();
     }
 
     respond("update", {

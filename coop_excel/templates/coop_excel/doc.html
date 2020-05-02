@@ -27,7 +27,7 @@
             <div class="decl">
                 (<span class="fname">{{ info.name }}</span><!--
              -->{% for arg in info.args %}<span class="arg">
-                    {{ arg|upper }}{% if arg == "rest" %}...{% endif %}<!--
+                    {{ arg }}<!--
              --></span>{% endfor %})
             </div>
             <p class="doc">

@@ -20,7 +20,16 @@ def documentation(req, query=""):
         else:
             fun = functions[name]
 
-            args = fun.__code__.co_varnames[1 : fun.__code__.co_argcount + 1]
+            args = []
+
+            for i, param in enumerate(fun.lisp_args):
+                if i == 0:
+                    continue
+
+                args.append(param)
+
+                if param.startswith("*"):
+                    args[-1] = args[-1][1:] + "..."
 
             info.append({
                 "found": True,

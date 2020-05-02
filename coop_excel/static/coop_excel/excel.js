@@ -182,10 +182,7 @@ function updateTable(delta) {
             table[cell.row] = [];
         }
 
-        table[cell.row][cell.col] = {
-            expression: cell.expression,
-            value: cell.value
-        };
+        table[cell.row][cell.col] = cell;
     }
 }
 
@@ -252,15 +249,18 @@ function redraw() {
 
     for (const row in table) {
         for (const col in table[row]) {
-            const cell = excel.rows[row].cells[col].children[0];
+            const cell = table[row][col];
 
-            if (cell.selection) {
-                cell.style.background = cell.selection;
+            const elt = excel.rows[row].cells[col].children[0];
+
+            if (elt.selection) {
+                elt.style.background = elt.selection;
             } else {
-                cell.style.background = "";
+                elt.style.background = "";
             }
 
-            cell.value = table[row][col].value;
+            elt.value = cell.value;
+            elt.expression = cell.expression;
         }
     }
 }

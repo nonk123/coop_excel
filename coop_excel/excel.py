@@ -1,5 +1,4 @@
 import re
-import copy
 
 from .lisp import evaluate
 

@@ -1,4 +1,5 @@
 import re
+import inspect
 
 functions = {}
 
@@ -41,39 +42,46 @@ def evaluate_form(ctx, expression):
             return None
 
 def evaluate(ctx, expression):
-    fun = re.fullmatch(r"\((?P<form>.*)\)", expression)
+    fun = re.fullmatch(r"\((.*)\)", expression)
 
     ctx["recursion"] += 1
 
     if fun:
-        return evaluate_form(ctx, fun.group("form"))
+        return evaluate_form(ctx, fun.group(1))
     else:
         return cast(ctx, expression)
 
 def cast(ctx, expr):
-    if callable(expr):
-        return expr
-
-    expr = str(expr)
-
-    string_match = re.fullmatch(r'(?<=\").*(?=\")', expr)
-
-    if string_match:
-        return string_match.group(0)
-
     try:
         return float(expr)
     except:
-        return None
+        return expr
 
-def lisp_fn(name=None):
+def lisp_fn(*args):
     def decorator(fn):
-        functions[name if name else fn.__name__] = fn
+        names = args if args else [fn.__name__]
+
+        real_name = names[0]
+
+        functions[real_name] = fn
+
+        fn.lisp_args = inspect.signature(fn).parameters.keys()
+
+        for alias in names[1:]:
+            def aliased(*args, **kwargs):
+                return fn(*args, **kwargs)
+
+            aliased.__name__ = alias
+            aliased.__doc__ = f"""Alias for function `{real_name}'."""
+            aliased.lisp_args = fn.lisp_args
+
+            functions[alias] = aliased
+
         return fn
 
     return decorator
 
-@lisp_fn()
+@lisp_fn("at", "$")
 def at(ctx, row, col):
     """Get the cell's value at ROW and COL."""
     return ctx["table"].get(int(row), int(col)).value

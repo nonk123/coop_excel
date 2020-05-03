@@ -22,6 +22,7 @@ let selection = {
 let selectedCells = [];
 
 const inputElement = document.getElementById("input");
+const valueField = document.getElementById("value");
 
 inputElement.onkeypress = function(e) {
     if (e.key == "Enter") {
@@ -32,6 +33,7 @@ inputElement.onkeypress = function(e) {
 function cellEdited(e) {
     if (selection) {
         inputElement.value = e.target.value;
+        valueField.textContent = e.target.value;
 
         for (const cell of selectedCells) {
             cell.expression = e.target.value;
@@ -129,10 +131,13 @@ function setListeners(elt) {
         selection.w = 0;
         selection.h = 0;
 
-        editing = e.target;
+        const editing = e.target;
+
         inputElement.value = editing.expression || editing.value;
 
         updateSelection();
+
+        valueField.textContent = editing.value;
 
         inputElement.focus();
     };
@@ -274,6 +279,10 @@ function update(data) {
 
     if (data.selections) {
         updateSelections(data.selections);
+    }
+
+    if (selectedCells.length) {
+        valueField.textContent = selectedCells[0].value;
     }
 }
 

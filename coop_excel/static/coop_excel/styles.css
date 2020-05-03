@@ -67,15 +67,22 @@ input {
     position: fixed;
 }
 
-#need-help {
-    text-align: center;
-}
-
 #input {
-    width: calc(100% - 120px);
-    height: 100%;
+    width: calc(100vw - 300px - 150px);
     border: 2px solid #37393A;
     border-radius: 4px;
+}
+
+#value {
+    width: 300px;
+    text-align: center;
+    display: inline-block;
+}
+
+#need-help {
+    width: 150px;
+    height: 100%;
+    text-align: center;
 }
 
 .cell {

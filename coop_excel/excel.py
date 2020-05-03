@@ -1,5 +1,4 @@
 import re
-from multiprocessing.pool import ThreadPool
 
 from .lisp import evaluate
 
@@ -23,46 +22,48 @@ class Cell:
     def __reset_dependants(self):
         self.__cached_value = None
 
-        for cell in self.dependants:
+        dependants_copy = [x for x in self.dependants]
+
+        self.dependants.clear()
+
+        for cell in dependants_copy:
             if cell.dependants:
                 cell.__reset_dependants()
             else:
                 cell.__cached_value = None
-
-        self.dependants.clear()
 
     @expression.setter
     def expression(self, expr):
         self.__expression = str(expr)
         self.__reset_dependants()
 
-    @property
-    def value(self):
+    def get_value(self, recursion=0):
         if self.__cached_value is not None:
             return self.__cached_value
 
-        split = re.split(r"=\s*(?!$)", self.expression, 2)
+        match = re.fullmatch(r"=\s*(.+)", self.expression)
 
-        if len(split) != 2:
+        if not match:
             return self.expression
 
         ctx = {
             "table": self.table,
             "cell": self,
+            "recursion": recursion
         }
 
-        self.__cached_value = evaluate(ctx, split[1])
-
-        if self.__cached_value is None:
-            return "<ERROR>"
-        else:
+        try:
+            self.__cached_value = evaluate(ctx, match[1])
             return self.__cached_value
+        except Exception as e:
+            self.__cached_value = None
+            return str(e)
 
     @property
     def stripped(self):
         return {
             "expression": self.expression,
-            "value": self.value,
+            "value": self.get_value(),
             "row": self.row,
             "col": self.col
         }
@@ -86,57 +87,53 @@ class Table:
         return row in range(self.height) and col in range(self.width)
 
     def get(self, row, col):
-        if self.is_in_bounds(row, col):
+        try:
             return self.rows[row][col]
-        else:
+        except:
             return Cell("", self, row, col)
 
     def set(self, row, col, expr):
-        self.rows[row][col].expression = expr
+        if self.is_in_bounds(row, col):
+            self.rows[row][col].expression = expr
 
-    def update_with_stripped(self, stripped):
-        def action(cell):
-            row = int(cell["row"])
-            col = int(cell["col"])
+    def set_stripped(self, cell):
+        self.set(int(cell["row"]), int(cell["col"]), cell["expression"])
 
-            if self.is_in_bounds(row, col):
-                self.set(row, col, cell["expression"])
-
-        with ThreadPool() as p:
-            p.map(action, stripped)
+    def fill_with_stripped(self, stripped):
+        for cell in stripped:
+            self.set_stripped(cell)
 
     @property
-    def _empty_stripped(self):
-        empty = []
+    def _empty_flat(self):
+        for i in range(len(self.rows) * len(self.rows[0])):
+            yield {}
 
-        for table_row in self.rows:
-            empty.append([{} for x in enumerate(table_row)])
-
-        return empty
+    @property
+    def flat(self):
+        for row in self.rows:
+            for cell in row:
+                yield cell.row, cell.col, cell
 
     def delta(self, base=None):
         delta = []
 
         if not self.last:
-            self.last = self._empty_stripped
+            self.last = self._empty_flat
 
         if base is None:
             base = self.last
         elif len(base) == 0:
-            base = self._empty_stripped
+            base = self._empty_flat
 
         this = []
 
-        for row, table_row in enumerate(base):
-            this.append([])
+        for row, col, old in self.flat:
+            new = self.get(row, col).stripped
 
-            for col, old in enumerate(table_row):
-                new = self.get(row, col).stripped
+            if old != new:
+                delta.append(new)
 
-                if old != new:
-                    delta.append(new)
-
-                this[-1].append(new)
+            this.append(new)
 
         self.last = this
 

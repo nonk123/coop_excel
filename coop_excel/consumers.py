@@ -66,7 +66,7 @@ class ExcelConsumer(WebsocketConsumer):
         if "cells" not in data:
             return self.close(self.INVALID_PAYLOAD)
 
-        table.update_with_stripped(data["cells"])
+        table.fill_with_stripped(data["cells"])
 
         delta = table.delta()
 

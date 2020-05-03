@@ -3,7 +3,7 @@ import inspect
 
 functions = {}
 
-def evaluate_form(ctx, expression, visited):
+def evaluate_form(ctx, expression):
     form = [""]
 
     depth = 0
@@ -23,46 +23,24 @@ def evaluate_form(ctx, expression, visited):
 
     form = [x.strip() for x in form if x.strip()]
 
-    if not form:
-        return None
-
     fun = form[0]
     args = form[1:]
 
-    if fun in functions:
-        try:
-            args = [evaluate(ctx, arg, visited) for arg in args]
-            return cast(ctx, functions[fun](ctx, *args))
-        except:
-            return None
+    args = [evaluate(ctx, arg) for arg in args]
+    return cast(ctx, functions[fun](ctx, *args))
 
-def detect_cycle(v, l):
-    occurences = {}
+def evaluate(ctx, expression):
+    if ctx["recursion"] > 100:
+        raise RuntimeError("Recursion limit exceeded")
 
-    for i, p in enumerate(l):
-        if p == v and l[i] != p:
-            occurences.setdefault(p, 0)
-            occurences[p] += 1
-
-    if v in occurences and occurences[v] > 1:
-        return True
-
-    l.append(v)
-
-    return False
-
-def evaluate(ctx, expression, visited=[]):
-    if detect_cycle((row(ctx), col(ctx)), visited):
-        return None
+    ctx["recursion"] += 1
 
     fun = re.fullmatch(r"\((.*)\)", expression)
 
     if fun:
-        ret = evaluate_form(ctx, fun.group(1), visited)
+        return evaluate_form(ctx, fun.group(1))
     else:
-        ret = cast(ctx, expression)
-
-    return ret
+        return cast(ctx, expression)
 
 def cast(ctx, expr):
     try:
@@ -117,11 +95,11 @@ def at(ctx, row, col):
     if ctx["cell"] not in cell.dependants:
         cell.dependants.append(ctx["cell"])
 
-    return cell.value
+    return cell.get_value(ctx["recursion"])
 
 def reduce(fun, *args):
     if not args:
-        return None
+        raise ValueError("Must supply arguments")
 
     x = args[0]
 
@@ -131,28 +109,28 @@ def reduce(fun, *args):
     return x
 
 @lisp_fn("+")
-def add(ctx, a, b, *etc):
-    """Add two or more numbers."""
-    return reduce(lambda x, y: x + y, a, b, *etc)
+def add(ctx, *operands):
+    "Add numbers."
+    return reduce(lambda x, y: x + y, *operands)
 
 @lisp_fn("-")
-def subtract(ctx, a, *etc):
-    """Subtract two or more numbers. Negate A if it is the only parameter."""
+def subtract(ctx, *operands):
+    """Negate one number or subtract many."""
 
-    if not etc:
-        return -a
+    if len(operands) == 1:
+        return -operands[0]
     else:
-        return reduce(lambda x, y: x - y, a, *etc)
+        return reduce(lambda x, y: x - y, *operands)
 
 @lisp_fn("*")
-def multiply(ctx, a, b, *etc):
-    """Multiply two or more numbers."""
-    return reduce(lambda x, y: x * y, a, b, *etc)
+def multiply(ctx, *operands):
+    "Multiply numbers."
+    return reduce(lambda x, y: x * y, *operands)
 
 @lisp_fn("/")
-def divide(ctx, a, b, *etc):
-    """Divide two or more numbers."""
-    return reduce(lambda x, y: x / y, a, b, *etc)
+def divide(ctx, *operands):
+    "Divide numbers."
+    return reduce(lambda x, y: x / y, *operands)
 
 @lisp_fn("1+")
 def add_one(ctx, x):

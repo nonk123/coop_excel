@@ -28,7 +28,7 @@ inputElement.onkeypress = function(e) {
     if (e.key == "Enter") {
         flushSetCells();
     }
-}
+};
 
 function cellEdited(e) {
     if (selection) {

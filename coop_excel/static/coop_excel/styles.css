@@ -69,13 +69,16 @@ input {
 
 #input {
     width: calc(100vw - 300px - 150px);
+    height: 100%;
     border: 2px solid #37393A;
     border-radius: 4px;
 }
 
 #value {
     width: 300px;
+    height: 100%;
     text-align: center;
+    vertical-align: top;
     display: inline-block;
 }
 

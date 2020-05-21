@@ -1,6 +1,8 @@
 import re
 import inspect
 
+RECURSION_LIMIT = 100
+
 functions = {}
 
 def evaluate_form(ctx, expression):
@@ -30,27 +32,43 @@ def evaluate_form(ctx, expression):
     return cast(ctx, functions[fun](ctx, *args))
 
 def evaluate(ctx, expression):
-    if ctx["recursion"] > 100:
+    if ctx["recursion"] > RECURSION_LIMIT:
         raise RuntimeError("Recursion limit exceeded")
 
     ctx["recursion"] += 1
 
-    fun = re.fullmatch(r"\((.*)\)", expression)
+    function = re.fullmatch(r"\((.*)\)", expression)
 
-    if fun:
-        return evaluate_form(ctx, fun.group(1))
+    if function:
+        return evaluate_form(ctx, function.group(1))
     else:
         return cast(ctx, expression)
 
 def cast(ctx, expr):
-    try:
-        return float(expr)
-    except:
+    if not isinstance(expr, str):
         return expr
 
-def lisp_fn(*args):
+    expr = expr
+
+    if re.fullmatch(r"\d+", expr):
+        return int(expr)
+    elif re.fullmatch(r"\d+\.\d+|\d+\.|\.\d+", expr):
+        return float(expr)
+    else:
+        return expr
+
+def alias(name, real):
+    def aliased(*args, **kwargs):
+        return real(*args, **kwargs)
+
+    aliased.__name__ = name
+    aliased.__doc__ = f"Alias for `{real.__name__}'."
+
+    return aliased
+
+def defun(*aliases):
     def decorator(fn):
-        names = args if args else [fn.__name__]
+        names = aliases if aliases else [fn.__name__]
 
         real_name = names[0]
 
@@ -73,21 +91,27 @@ def lisp_fn(*args):
 
         fn.lisp_args = fn.lisp_args[1:]
 
-        for alias in names[1:]:
-            def aliased(*args, **kwargs):
-                return fn(*args, **kwargs)
-
-            aliased.__name__ = alias
-            aliased.__doc__ = f"""Alias for `{real_name}'."""
+        for name in names[1:]:
+            aliased = alias(name, fn)
             aliased.lisp_args = fn.lisp_args
-
-            functions[alias] = aliased
+            functions[name] = aliased
 
         return fn
 
     return decorator
 
-@lisp_fn("at", "$")
+def flatten(sequence):
+    flat = []
+
+    for element in sequence:
+        if isinstance(element, list):
+            flat += flatten(element)
+        else:
+            flat.append(element)
+
+    return flat
+
+@defun("at", "$")
 def at(ctx, row, col):
     """Get the cell's value at ROW and COL."""
     cell = ctx["table"].get(int(row), int(col))
@@ -97,67 +121,115 @@ def at(ctx, row, col):
 
     return cell.get_value(ctx["recursion"])
 
-def reduce(fun, *args):
+def reduce(_type, fun, *args):
     if not args:
         raise ValueError("Must supply arguments")
 
-    x = args[0]
+    args = flatten(args)
+
+    def check(x):
+        if isinstance(x, _type):
+            return x
+        elif isinstance(x, dict):
+            return check(x["value"])
+
+        try:
+            return _type(x)
+        except:
+            raise TypeError(f"Expected {str(_type)}, got {str(type(x))}")
+
+    x = check(args[0])
 
     for y in args[1:]:
-        x = fun(x, y)
+        x = fun(check(x), check(y))
 
     return x
 
-@lisp_fn("+")
+@defun("+")
 def add(ctx, *operands):
     "Add numbers."
-    return reduce(lambda x, y: x + y, *operands)
+    return reduce(float, lambda x, y: x + y, *operands)
 
-@lisp_fn("-")
+@defun("-")
 def subtract(ctx, *operands):
     """Negate one number or subtract many."""
 
     if len(operands) == 1:
         return -operands[0]
     else:
-        return reduce(lambda x, y: x - y, *operands)
+        return reduce(float, lambda x, y: x - y, *operands)
 
-@lisp_fn("*")
+@defun("*")
 def multiply(ctx, *operands):
     "Multiply numbers."
-    return reduce(lambda x, y: x * y, *operands)
+    return reduce(float, lambda x, y: x * y, *operands)
 
-@lisp_fn("/")
+@defun("/")
 def divide(ctx, *operands):
     "Divide numbers."
-    return reduce(lambda x, y: x / y, *operands)
+    return reduce(float, lambda x, y: x / y, *operands)
 
-@lisp_fn("1+")
+@defun("1+")
 def add_one(ctx, x):
     """Same as (+ X 1)"""
-    return x + 1
+    return add(ctx, x, 1)
 
-@lisp_fn("1-")
+@defun("1-")
 def subtract_one(ctx, x):
     """Same as (- X 1)"""
-    return x - 1
+    return subtract(ctx, x, 1)
 
-@lisp_fn("above", "^")
+@defun("above", "^")
 def above(ctx, n=1):
-    """Get the cell N above the current."""
+    """Get the Nth cell above."""
     return at(ctx, row(ctx) - n, col(ctx))
 
-@lisp_fn("below", "v")
+@defun("below", "v")
 def below(ctx, n=1):
-    """Get the cell N below the current."""
-    return at(ctx, row(ctx) + n, col(ctx))
+    """Get the Nth cell below."""
+    return above(ctx, -n)
 
-@lisp_fn()
+@defun("left", "<")
+def left(ctx, n=1):
+    """Get the Nth cell to the left."""
+    return at(ctx, row(ctx), col(ctx) - n)
+
+@defun("right", ">")
+def right(ctx, n=1):
+    """Get the Nth cell to the right."""
+    return left(ctx, -n)
+
+@defun("range", "#")
+def _range(ctx, start_row, start_col, end_row, end_col):
+    """Get a rectangular range of cells between a start and an end point."""
+    cells = []
+
+    for row in range(int(start_row), int(end_row) + 1):
+        for col in range(int(start_col), int(end_col) + 1):
+            cells.append(at(ctx, row, col))
+
+    return cells
+
+@defun("row", "_")
 def row(ctx):
     """Get this cell's row."""
     return ctx["cell"].row
 
-@lisp_fn()
+@defun("col", "|")
 def col(ctx):
     """Get this cell's column."""
     return ctx["cell"].col
+
+@defun("rows", ">|")
+def rows(ctx):
+    return len(ctx["table"].rows)
+
+@defun("cols", ">_")
+def cols(ctx):
+    return len(ctx["table"].rows[0])
+
+@defun("average", "avg")
+def average(ctx, x, *rest):
+    """Find the average value of X and the REST."""
+    args = flatten([x, *rest])
+    return divide(ctx, add(ctx, args), len(args))

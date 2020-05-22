@@ -53,7 +53,17 @@ class Cell:
         }
 
         try:
-            self.__cached_value = evaluate(ctx, match[1])
+            value = evaluate(ctx, match[1])
+
+            try:
+                for new in iter(value):
+                    row = self.row + new["row"] - value.start_row
+                    col = self.col + new["col"] - value.start_col
+
+                    self.table.get(row, col).__cached_value = new["value"]
+            except TypeError:
+                self.__cached_value = value
+
             return self.__cached_value
         except Exception as e:
             self.__cached_value = None

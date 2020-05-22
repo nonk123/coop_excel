@@ -106,6 +106,8 @@ def flatten(sequence):
     for element in sequence:
         if isinstance(element, list):
             flat += flatten(element)
+        elif isinstance(element, CellRange):
+            flat += flatten(elt["value"] for elt in element)
         else:
             flat.append(element)
 
@@ -200,15 +202,42 @@ def right(ctx, n=1):
     return left(ctx, -n)
 
 @defun("range", "#")
-def _range(ctx, start_row, start_col, end_row, end_col):
-    """Get a rectangular range of cells between a start and an end point."""
-    cells = []
+class CellRange:
+    """Get a range of cells between a start and end point."""
 
-    for row in range(int(start_row), int(end_row) + 1):
-        for col in range(int(start_col), int(end_col) + 1):
-            cells.append(at(ctx, row, col))
+    def __init__(self, ctx, start_row, start_col, end_row, end_col):
+        self.__ctx = ctx
 
-    return cells
+        self.start_row = start_row
+        self.start_col = start_col
+        self.end_row = end_row
+        self.end_col = end_col
+
+        self.__iterator_row = self.start_row
+        self.__iterator_col = self.start_col
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.__iterator_row > self.end_row:
+            self.__iterator_col += 1
+            self.__iterator_row = self.start_row
+
+        print(self.__iterator_row, self.__iterator_col)
+
+        if self.__iterator_col > self.end_col:
+            raise StopIteration
+
+        cell = {
+            "value": at(self.__ctx, self.__iterator_row, self.__iterator_col),
+            "row": self.__iterator_row,
+            "col": self.__iterator_col
+        }
+
+        self.__iterator_row += 1
+
+        return cell
 
 @defun("row", "_")
 def row(ctx):

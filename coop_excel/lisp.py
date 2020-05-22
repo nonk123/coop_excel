@@ -224,8 +224,6 @@ class CellRange:
             self.__iterator_col += 1
             self.__iterator_row = self.start_row
 
-        print(self.__iterator_row, self.__iterator_col)
-
         if self.__iterator_col > self.end_col:
             raise StopIteration
 
